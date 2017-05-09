@@ -13,7 +13,7 @@ Do not use this template in production environments.
 
 To directly install everything you need:
 ```bash
-oc process -f https://raw.githubusercontent.com/jaegertracing/jaeger-openshift/master/all-in-one/jaeger-all-in-one-template.yml | oc create -f -
+oc process -f https://raw.githubusercontent.com/jaegertracing/jaeger-openshift/0.1.0/all-in-one/jaeger-all-in-one-template.yml | oc create -f -
 oc delete all,template -l jaeger-infra    # to remove everything
 ```
 
