@@ -18,7 +18,7 @@ metadata:
   annotations:
     description: Jaeger distributed tracing system, all-in-one distribution
     iconClass: icon-go-gopher
-    tags: tracing,opentracing,jaeger,zipkin
+    tags: tracing,opentracing,jaeger
   labels:
       jaeger-infra: all-in-one
 objects:
@@ -53,6 +53,11 @@ objects:
                   protocol: TCP
               resources: {}
               imagePullPolicy: Always
+              readinessProbe:
+                httpGet:
+                  path: "/"
+                  port: 16686
+                initialDelaySeconds: 5
           securityContext: {}
 - apiVersion: v1
   kind: Service
