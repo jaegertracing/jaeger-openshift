@@ -1,0 +1,5 @@
+
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+target
+

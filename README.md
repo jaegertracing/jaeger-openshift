@@ -23,3 +23,13 @@ Tracer sometimes fails to resolve Jaeger's address. In such a case run:
 sudo iptables -F
 ```
 and restart affected applications.
+
+## Testing
+Tests are based on [Arquillian Cube](http://arquillian.org/arquillian-cube/) which require an active connection to
+openshift cluster (via `oc`). Currently all templates are tested on minishift or local all-in-one cluster (`oc cluster
+up`).
+
+```bash
+minishift start // or oc cluster up
+mvn clean verify -Pe2e
+```
