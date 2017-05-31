@@ -57,7 +57,7 @@ objects:
       spec:
           containers:
             - name: ${JAEGER_NAME}
-              image: jaegertracing/all-in-one:f209812d
+              image: jaegertracing/all-in-one:9f3984cd
               ports:
                 - containerPort: 5775
                   protocol: UDP
