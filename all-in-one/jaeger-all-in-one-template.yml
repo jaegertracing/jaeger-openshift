@@ -12,40 +12,51 @@
 # the License.
 #
 
-# This template uses Jaeger with in-memory storage with limited functionality
-# Do not use this in production environment!
-#
-# oc create -f jaeger-all-in-one-template.yml
-# oc process -f jaeger-all-in-one-template.yml | oc create -f -
-# oc delete all,template -l jaeger-infra
 parameters:
-- description: The name of the Jaeger
-  displayName: Jaeger service name
-  name: JAEGER_NAME
+- description: The name of the Jaeger Service.
+  displayName: Jaeger Service Name
+  name: JAEGER_SERVICE_NAME
   required: true
-  value: jaeger-all-in-one
+  value: jaeger
+- description: The Jaeger image version to use
+  displayName: Image version
+  name: IMAGE_VERSION
+  required: false
+  value: 9f3984cd
+- description: The namespace where to install the Jaeger instance
+  displayName: Namespace
+  name: NAMESPACE
+  required: false
+  value: jaeger-infra
 
 apiVersion: v1
 kind: Template
+labels:
+  template: jaeger-template-all-in-one
+  jaeger-infra: template-all-in-one
+message: 'A Jaeger service has been created in your project.'
 metadata:
-  name: jaeger-all-in-one
+  name: jaeger-template-all-in-one
   annotations:
-    description: Jaeger distributed tracing system, all-in-one distribution
+    description: Jaeger Distributed Tracing Server (all-in-one)
     iconClass: icon-go-gopher
-    tags: tracing,opentracing,jaeger
+    openshift.io/display-name: Jaeger
+    tags: instant-app,tracing,opentracing,jaeger
   labels:
-      jaeger-infra: all-in-one
+    name: jaeger-infra
 objects:
 - apiVersion: v1
   kind: DeploymentConfig
   metadata:
-    name: ${JAEGER_NAME}
+    namespace: "${NAMESPACE}"
+    name: ${JAEGER_SERVICE_NAME}
     labels:
-        jaeger-infra: all-in-one
+      name: jaeger-dc
+      jaeger-infra: all-in-one-dc
   spec:
     replicas: 1
     selector:
-      name: ${JAEGER_NAME}
+      name: ${JAEGER_SERVICE_NAME}
     strategy:
       type: Recreate
     triggers:
@@ -53,11 +64,11 @@ objects:
     template:
       metadata:
         labels:
-          name: ${JAEGER_NAME}
+          name: ${JAEGER_SERVICE_NAME}
       spec:
           containers:
-            - name: ${JAEGER_NAME}
-              image: jaegertracing/all-in-one:9f3984cd
+            - name: ${JAEGER_SERVICE_NAME}
+              image: jaegertracing/all-in-one:${IMAGE_VERSION}
               ports:
                 - containerPort: 5775
                   protocol: UDP
@@ -67,20 +78,20 @@ objects:
                   protocol: UDP
                 - containerPort: 16686
                   protocol: TCP
-              resources: {}
-              imagePullPolicy: Always
+              imagePullPolicy: IfNotPresent
               readinessProbe:
                 httpGet:
                   path: "/"
                   port: 16686
                 initialDelaySeconds: 5
-          securityContext: {}
 - apiVersion: v1
   kind: Service
   metadata:
-    name: ${JAEGER_NAME}
+    namespace: "${NAMESPACE}"
+    name: ${JAEGER_SERVICE_NAME}
     labels:
-      jaeger-infra: all-in-one
+      name: jaeger-service
+      jaeger-infra: all-in-one-service
   spec:
     ports:
       - name: query-http
@@ -100,18 +111,21 @@ objects:
         protocol: UDP
         targetPort: 6832
     selector:
-        name: ${JAEGER_NAME}
+        name: ${JAEGER_SERVICE_NAME}
     type: ClusterIP
 - apiVersion: v1
   kind: Route
   metadata:
-    name: jaeger
+    namespace: "${NAMESPACE}"
+    name: ${JAEGER_SERVICE_NAME}-query
     labels:
-      jaeger-infra: all-in-one
+      jaeger-infra: query-route
   spec:
     to:
       kind: Service
-      name: ${JAEGER_NAME}
-      port:
+      name: ${JAEGER_SERVICE_NAME}
     port:
       targetPort: query-http
+    tls:
+      termination: edge
+      insecureEdgeTerminationPolicy: Allow
