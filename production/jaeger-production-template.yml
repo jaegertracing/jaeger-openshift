@@ -28,11 +28,6 @@ parameters:
   name: KEYSPACE
   required: true
   value: jaeger_v1_dc1
-- description: The namespace where to install the Jaeger instance
-  displayName: Namespace
-  name: NAMESPACE
-  required: false
-  value: jaeger-infra
 
 apiVersion: v1
 kind: Template
@@ -40,7 +35,6 @@ labels:
   app: jaeger
   template: jaeger-template
   jaeger-infra: template
-message: 'A Jaeger service has been created in your project.'
 metadata:
   name: jaeger-template
   annotations:
@@ -51,11 +45,11 @@ metadata:
   labels:
     app: jaeger
     name: jaeger-infra
+    jaeger-infra: template-production
 objects:
 - apiVersion: v1
   kind: Service
   metadata:
-    namespace: "${NAMESPACE}"
     name: cassandra
     labels:
       app: jaeger
@@ -74,10 +68,9 @@ objects:
     clusterIP: None
     selector:
       app: cassandra
-- apiVersion: "apps/v1beta1"
+- apiVersion: apps/v1beta1
   kind: StatefulSet
   metadata:
-    namespace: "${NAMESPACE}"
     name: cassandra
     labels:
       app: jaeger
@@ -115,7 +108,7 @@ objects:
             - name: CASSANDRA_HOME
               value: "/opt/apache-cassandra-3.0.12"
             - name: CASSANDRA_CLUSTER_NAME
-              value: "jaeger"
+              value: jaeger
             - name: POD_IP
               valueFrom:
                 fieldRef:
@@ -125,7 +118,7 @@ objects:
                 fieldRef:
                   fieldPath: metadata.namespace
             - name: CASSANDRA_SEED_POD
-              value: "cassandra-0.cassandra"
+              value: cassandra-0.cassandra
           readinessProbe:
             exec:
               command:
@@ -143,7 +136,6 @@ objects:
 - apiVersion: batch/v1
   kind: Job
   metadata:
-    namespace: "${NAMESPACE}"
     name: jaeger-cassandra-schema-job
     labels:
       app: jaeger
@@ -161,7 +153,6 @@ objects:
 - apiVersion: v1
   kind: DeploymentConfig
   metadata:
-    namespace: "${NAMESPACE}"
     name: ${JAEGER_SERVICE_NAME}-collector
     labels:
       app: jaeger
@@ -198,7 +189,6 @@ objects:
 - apiVersion: v1
   kind: Service
   metadata:
-    namespace: "${NAMESPACE}"
     name: ${JAEGER_SERVICE_NAME}-collector
     labels:
       app: jaeger
@@ -215,7 +205,6 @@ objects:
 - apiVersion: v1
   kind: DeploymentConfig
   metadata:
-    namespace: "${NAMESPACE}"
     name: ${JAEGER_SERVICE_NAME}-query
     labels:
       app: jaeger
@@ -258,7 +247,6 @@ objects:
 - apiVersion: v1
   kind: Service
   metadata:
-    namespace: "${NAMESPACE}"
     name: ${JAEGER_SERVICE_NAME}-query
     labels:
       app: jaeger
@@ -275,7 +263,6 @@ objects:
 - apiVersion: v1
   kind: Route
   metadata:
-    namespace: "${NAMESPACE}"
     name: ${JAEGER_SERVICE_NAME}-query
     labels:
       app: jaeger
@@ -290,7 +277,6 @@ objects:
 - apiVersion: extensions/v1beta1
   kind: DaemonSet
   metadata:
-    namespace: "${NAMESPACE}"
     name: ${JAEGER_SERVICE_NAME}-agent
     labels:
       app: jaeger
@@ -321,7 +307,6 @@ objects:
 - apiVersion: v1
   kind: Service
   metadata:
-    namespace: "${NAMESPACE}"
     name: ${JAEGER_SERVICE_NAME}-agent
     labels:
       app: jaeger

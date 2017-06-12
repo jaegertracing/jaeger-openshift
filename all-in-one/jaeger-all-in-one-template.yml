@@ -23,18 +23,12 @@ parameters:
   name: IMAGE_VERSION
   required: false
   value: 9f3984cd
-- description: The namespace where to install the Jaeger instance
-  displayName: Namespace
-  name: NAMESPACE
-  required: false
-  value: jaeger-infra
 
 apiVersion: v1
 kind: Template
 labels:
   template: jaeger-template-all-in-one
   jaeger-infra: template-all-in-one
-message: 'A Jaeger service has been created in your project.'
 metadata:
   name: jaeger-template-all-in-one
   annotations:
@@ -44,11 +38,11 @@ metadata:
     tags: instant-app,tracing,opentracing,jaeger
   labels:
     name: jaeger-infra
+    jaeger-infra: jaeger-template-all-in-one
 objects:
 - apiVersion: v1
   kind: DeploymentConfig
   metadata:
-    namespace: "${NAMESPACE}"
     name: ${JAEGER_SERVICE_NAME}
     labels:
       name: jaeger-dc
@@ -87,7 +81,6 @@ objects:
 - apiVersion: v1
   kind: Service
   metadata:
-    namespace: "${NAMESPACE}"
     name: ${JAEGER_SERVICE_NAME}
     labels:
       name: jaeger-service
@@ -116,7 +109,6 @@ objects:
 - apiVersion: v1
   kind: Route
   metadata:
-    namespace: "${NAMESPACE}"
     name: ${JAEGER_SERVICE_NAME}-query
     labels:
       jaeger-infra: query-route

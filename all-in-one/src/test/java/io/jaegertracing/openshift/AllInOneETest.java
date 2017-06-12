@@ -34,7 +34,7 @@ import okhttp3.Response;
  */
 @RunWith(ArquillianConditionalRunner.class)
 public class AllInOneETest {
-    private static final String SERVICE_NAME = "jaeger-all-in-one";
+    private static final String SERVICE_NAME = "jaeger";
 
     private OkHttpClient okHttpClient = new OkHttpClient.Builder()
             .build();
