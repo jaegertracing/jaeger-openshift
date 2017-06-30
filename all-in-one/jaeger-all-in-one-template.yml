@@ -22,7 +22,7 @@ parameters:
   displayName: Image version
   name: IMAGE_VERSION
   required: false
-  value: 9f3984cd
+  value: latest
 
 apiVersion: v1
 kind: Template
@@ -81,7 +81,7 @@ objects:
 - apiVersion: v1
   kind: Service
   metadata:
-    name: ${JAEGER_SERVICE_NAME}
+    name: ${JAEGER_SERVICE_NAME}-query
     labels:
       name: jaeger-service
       jaeger-infra: all-in-one-service
@@ -91,6 +91,18 @@ objects:
         port: 80
         protocol: TCP
         targetPort: 16686
+    selector:
+        name: ${JAEGER_SERVICE_NAME}
+    type: ClusterIP
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: ${JAEGER_SERVICE_NAME}-agent
+    labels:
+      name: jaeger-service
+      jaeger-infra: all-in-one-service
+  spec:
+    ports:
       - name: agent-zipkin-thrift
         port: 5775
         protocol: UDP
@@ -105,6 +117,7 @@ objects:
         targetPort: 6832
     selector:
         name: ${JAEGER_SERVICE_NAME}
+    clusterIP: None
     type: ClusterIP
 - apiVersion: v1
   kind: Route
@@ -115,7 +128,7 @@ objects:
   spec:
     to:
       kind: Service
-      name: ${JAEGER_SERVICE_NAME}
+      name: ${JAEGER_SERVICE_NAME}-query
     port:
       targetPort: query-http
     tls:

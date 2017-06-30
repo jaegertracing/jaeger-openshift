@@ -22,7 +22,7 @@ parameters:
   displayName: Image version
   name: IMAGE_VERSION
   required: false
-  value: 9f3984cd
+  value: latest
 - description: The Cassandra Keyspace for the Jaeger data
   displayName: Jaeger Cassandra Keyspace
   name: KEYSPACE

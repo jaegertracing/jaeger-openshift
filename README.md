@@ -60,6 +60,22 @@ appropriate to create a `PersistentVolumeClaim`/`PersistentVolume` and use it in
 Additionally, the Cassandra image is not any officially supported image. This will be changed soon, once
 an official image for OpenShift is released.
 
+## Using a different version
+
+The templates are using the `latest` version, which is what you probably want at this stage. If you need to
+use a specific Docker image version, specify it via the template parameter `IMAGE_VERSION`, as follows:
+
+```bash
+oc process -f <path-to-template> -p IMAGE_VERSION=<sha> | oc create -n jaeger -f -
+```
+
+A list of tags can be found here:
+https://hub.docker.com/r/jaegertracing/all-in-one/tags/
+
+Note that the Docker image tags are related to the git commit SHAs:
+`IMAGE_VERSION` 6942fec0 is the Docker image for https://github.com/uber/jaeger/commit/6942fec
+`IMAGE_VERSION` latest is the Docker image for `master`
+
 ## Getting an OpenShift cluster running
 
 As a developer looking to try this out locally, the easiest is to use the `oc cluster up` command. Getting
