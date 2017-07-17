@@ -47,42 +47,21 @@ metadata:
     name: jaeger-infra
     jaeger-infra: template-production
 objects:
-- apiVersion: v1
-  kind: Service
-  metadata:
-    name: cassandra
-    labels:
-      app: jaeger
-      name: jaeger-cassandra-service
-      jaeger-infra: cassandra-service
-  spec:
-    ports:
-    - port: 7000
-      name: intra-node
-    - port: 7001
-      name: tls-intra-node
-    - port: 7199
-      name: jmx
-    - port: 9042
-      name: cql
-    clusterIP: None
-    selector:
-      app: cassandra
 - apiVersion: apps/v1beta1
   kind: StatefulSet
   metadata:
     name: cassandra
     labels:
       app: jaeger
-      name: jaeger-cassandra-statefulset
       jaeger-infra: cassandra-statefulset
   spec:
     serviceName: cassandra
-    replicas: 2
+    replicas: 3
     template:
       metadata:
         labels:
           app: cassandra
+          jaeger-infra: cassandra-replica
       spec:
         containers:
         - name: cassandra
@@ -133,6 +112,26 @@ objects:
         volumes:
         - name: cassandra-data
           emptyDir: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: cassandra
+    labels:
+      app: jaeger
+      jaeger-infra: cassandra-service
+  spec:
+    ports:
+    - port: 7000
+      name: intra-node
+    - port: 7001
+      name: tls-intra-node
+    - port: 7199
+      name: jmx
+    - port: 9042
+      name: cql
+    clusterIP: None
+    selector:
+      app: cassandra
 - apiVersion: batch/v1
   kind: Job
   metadata:
@@ -150,33 +149,30 @@ objects:
         - name: jaeger-cassandra-schema
           image: jaegertracing/jaeger-cassandra-schema:${IMAGE_VERSION}
         restartPolicy: Never
-- apiVersion: v1
-  kind: DeploymentConfig
+- apiVersion: extensions/v1beta1
+  kind: Deployment
   metadata:
     name: ${JAEGER_SERVICE_NAME}-collector
     labels:
       app: jaeger
-      jaeger-infra: collector-dc
+      jaeger-infra: collector-deployment
   spec:
     replicas: 1
-    triggers:
-      - type: ConfigChange
-    selector:
-      name: ${JAEGER_SERVICE_NAME}-collector
     strategy:
       type: Recreate
     template:
       metadata:
         labels:
           app: jaeger
-          name: ${JAEGER_SERVICE_NAME}-collector
+          jaeger-infra: collector-pod
       spec:
         containers:
-        - capabilities: {}
-          image: jaegertracing/jaeger-collector:${IMAGE_VERSION}
+        - image: jaegertracing/jaeger-collector:${IMAGE_VERSION}
           name: ${JAEGER_SERVICE_NAME}-collector
           ports:
           - containerPort: 14267
+            protocol: TCP
+          - containerPort: 14268
             protocol: TCP
           command:
           - "/go/bin/collector-linux"
@@ -184,8 +180,6 @@ objects:
           - "-cassandra.keyspace=${KEYSPACE}"
         dnsPolicy: ClusterFirst
         restartPolicy: Always
-    triggers:
-    - type: ConfigChange
 - apiVersion: v1
   kind: Service
   metadata:
@@ -195,37 +189,36 @@ objects:
       jaeger-infra: collector-service
   spec:
     ports:
-    - name: jaeger-collector
+    - name: jaeger-collector-tchannel
       port: 14267
       protocol: TCP
       targetPort: 14267
+    - name: jaeger-collector-http
+      port: 14268
+      protocol: TCP
+      targetPort: 14268
     selector:
-      name: ${JAEGER_SERVICE_NAME}-collector
+      jaeger-infra: collector-pod
     type: ClusterIP
-- apiVersion: v1
-  kind: DeploymentConfig
+- apiVersion: extensions/v1beta1
+  kind: Deployment
   metadata:
     name: ${JAEGER_SERVICE_NAME}-query
     labels:
       app: jaeger
-      jaeger-infra: query-dc
+      jaeger-infra: query-deployment
   spec:
     replicas: 1
-    triggers:
-      - type: ConfigChange
-    selector:
-      name: ${JAEGER_SERVICE_NAME}-query
     strategy:
       type: Recreate
     template:
       metadata:
         labels:
           app: jaeger
-          name: ${JAEGER_SERVICE_NAME}-query
+          jaeger-infra: query-pod
       spec:
         containers:
-        - capabilities: {}
-          image: jaegertracing/jaeger-query:${IMAGE_VERSION}
+        - image: jaegertracing/jaeger-query:${IMAGE_VERSION}
           name: ${JAEGER_SERVICE_NAME}-query
           ports:
           - containerPort: 16686
@@ -242,8 +235,6 @@ objects:
             initialDelaySeconds: 5
         dnsPolicy: ClusterFirst
         restartPolicy: Always
-    triggers:
-    - type: ConfigChange
 - apiVersion: v1
   kind: Service
   metadata:
@@ -253,27 +244,13 @@ objects:
       jaeger-infra: query-service
   spec:
     ports:
-    - name: query-http
+    - name: jaeger-query
       port: 80
       protocol: TCP
       targetPort: 16686
     selector:
-      name: ${JAEGER_SERVICE_NAME}-query
-    type: ClusterIP
-- apiVersion: v1
-  kind: Route
-  metadata:
-    name: ${JAEGER_SERVICE_NAME}-query
-    labels:
-      app: jaeger
-      jaeger-infra: query-route
-  spec:
-    tls:
-      insecureEdgeTerminationPolicy: Allow
-      termination: edge
-    to:
-      kind: Service
-      name: ${JAEGER_SERVICE_NAME}-query
+      jaeger-infra: query-pod
+    type: LoadBalancer
 - apiVersion: extensions/v1beta1
   kind: DaemonSet
   metadata:
@@ -293,10 +270,6 @@ objects:
           command:
           - "/go/bin/agent-linux"
           - "-collector.host-port=jaeger-collector:14267"
-          metadata:
-            labels:
-              app: jaeger
-              jaeger-infra: agent-instance
           ports:
           - containerPort: 5775
             protocol: UDP
@@ -328,3 +301,17 @@ objects:
     clusterIP: None
     selector:
       jaeger-infra: agent-instance
+- apiVersion: v1
+  kind: Route
+  metadata:
+    name: ${JAEGER_SERVICE_NAME}-query
+    labels:
+      app: jaeger
+      jaeger-infra: query-route
+  spec:
+    tls:
+      insecureEdgeTerminationPolicy: Allow
+      termination: edge
+    to:
+      kind: Service
+      name: ${JAEGER_SERVICE_NAME}-query

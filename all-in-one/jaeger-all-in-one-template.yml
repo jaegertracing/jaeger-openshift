@@ -40,29 +40,26 @@ metadata:
     name: jaeger-infra
     jaeger-infra: jaeger-template-all-in-one
 objects:
-- apiVersion: v1
-  kind: DeploymentConfig
+- apiVersion: extensions/v1beta1
+  kind: Deployment
   metadata:
     name: ${JAEGER_SERVICE_NAME}
     labels:
-      name: jaeger-dc
-      jaeger-infra: all-in-one-dc
+      app: jaeger
+      jaeger-infra: jaeger-deployment
   spec:
     replicas: 1
-    selector:
-      name: ${JAEGER_SERVICE_NAME}
     strategy:
       type: Recreate
-    triggers:
-     - type: ConfigChange
     template:
       metadata:
         labels:
-          name: ${JAEGER_SERVICE_NAME}
+          app: jaeger
+          jaeger-infra: jaeger-pod
       spec:
           containers:
-            - name: ${JAEGER_SERVICE_NAME}
-              image: jaegertracing/all-in-one:${IMAGE_VERSION}
+            - image: jaegertracing/all-in-one:${IMAGE_VERSION}
+              name: ${JAEGER_SERVICE_NAME}
               ports:
                 - containerPort: 5775
                   protocol: UDP
@@ -72,7 +69,6 @@ objects:
                   protocol: UDP
                 - containerPort: 16686
                   protocol: TCP
-              imagePullPolicy: IfNotPresent
               readinessProbe:
                 httpGet:
                   path: "/"
@@ -83,8 +79,8 @@ objects:
   metadata:
     name: ${JAEGER_SERVICE_NAME}-query
     labels:
-      name: jaeger-service
-      jaeger-infra: all-in-one-service
+      app: jaeger
+      jaeger-infra: jaeger-service
   spec:
     ports:
       - name: query-http
@@ -92,33 +88,52 @@ objects:
         protocol: TCP
         targetPort: 16686
     selector:
-        name: ${JAEGER_SERVICE_NAME}
+      jaeger-infra: jaeger-pod
+    type: LoadBalancer
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: ${JAEGER_SERVICE_NAME}-collector
+    labels:
+      app: jaeger
+      jaeger-infra: collector-service
+  spec:
+    ports:
+    - name: jaeger-collector-tchannel
+      port: 14267
+      protocol: TCP
+      targetPort: 14267
+    - name: jaeger-collector-http
+      port: 14268
+      protocol: TCP
+      targetPort: 14268
+    selector:
+      jaeger-infra: jaeger-pod
     type: ClusterIP
 - apiVersion: v1
   kind: Service
   metadata:
     name: ${JAEGER_SERVICE_NAME}-agent
     labels:
-      name: jaeger-service
-      jaeger-infra: all-in-one-service
+      app: jaeger
+      jaeger-infra: agent-service
   spec:
     ports:
-      - name: agent-zipkin-thrift
-        port: 5775
-        protocol: UDP
-        targetPort: 5775
-      - name: agent-compact
-        port: 6831
-        protocol: UDP
-        targetPort: 6831
-      - name: agent-binary
-        port: 6832
-        protocol: UDP
-        targetPort: 6832
-    selector:
-        name: ${JAEGER_SERVICE_NAME}
+    - name: agent-zipkin-thrift
+      port: 5775
+      protocol: UDP
+      targetPort: 5775
+    - name: agent-compact
+      port: 6831
+      protocol: UDP
+      targetPort: 6831
+    - name: agent-binary
+      port: 6832
+      protocol: UDP
+      targetPort: 6832
     clusterIP: None
-    type: ClusterIP
+    selector:
+      jaeger-infra: jaeger-pod
 - apiVersion: v1
   kind: Route
   metadata:
