@@ -28,6 +28,11 @@ parameters:
   name: KEYSPACE
   required: true
   value: jaeger_v1_dc1
+- description: The URL to the Red Hat SSO / Keycloak server
+  displayName: Red Hat SSO URL
+  name: REDHAT_SSO_URL
+  required: true
+  value: http://keycloak.192.168.2.111.nip.io:8080/auth
 
 apiVersion: v1
 kind: Template
@@ -200,6 +205,43 @@ objects:
     selector:
       jaeger-infra: collector-pod
     type: ClusterIP
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: ${JAEGER_SERVICE_NAME}-configuration
+    labels:
+      app: jaeger
+      jaeger-infra: security-proxy-configuration
+  data:
+    proxy: |
+      {
+          "target-url": "http://localhost:16686",
+          "bind-address": "0.0.0.0",
+          "http-port": "8080",
+          "applications": [
+              {
+                  "base-path": "/",
+                  "adapter-config": {
+                    "realm": "jaeger",
+                    "auth-server-url": "${REDHAT_SSO_URL}",
+                    "ssl-required": "external",
+                    "resource": "proxy-jaeger",
+                    "credentials": {
+                      "secret": "c8f253b3-f04b-4a25-aa9c-2df4f62946b8"
+                    }
+                  }
+            ,
+            "constraints": [
+                      {
+                          "pattern": "/*",
+                          "roles-allowed": [
+                              "user"
+                          ]
+                      }
+                  ]
+              }
+          ]
+      }
 - apiVersion: extensions/v1beta1
   kind: Deployment
   metadata:
@@ -232,7 +274,25 @@ objects:
             httpGet:
               path: "/"
               port: 16686
-            initialDelaySeconds: 5
+        - image: jpkroehling/keycloak-proxy
+          name: ${JAEGER_SERVICE_NAME}-query-security-proxy
+          volumeMounts:
+          - mountPath: /opt/jboss/conf
+            name: security-proxy-configuration-volume
+          ports:
+          - containerPort: 8080
+            protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: "/"
+              port: 8080
+        volumes:
+          - configMap:
+              name: ${JAEGER_SERVICE_NAME}-configuration
+              items:
+                - key: proxy
+                  path: proxy.json
+            name: security-proxy-configuration-volume
         dnsPolicy: ClusterFirst
         restartPolicy: Always
 - apiVersion: v1
@@ -247,7 +307,7 @@ objects:
     - name: jaeger-query
       port: 80
       protocol: TCP
-      targetPort: 16686
+      targetPort: 8080
     selector:
       jaeger-infra: query-pod
     type: LoadBalancer

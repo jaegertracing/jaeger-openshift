@@ -88,7 +88,7 @@ Another alternative is to use [`minishift`](https://github.com/minishift/minishi
 If you need to remove the Jaeger components created by this template, run:
 
 ```bash
-oc delete all,template,daemonset -l jaeger-infra
+oc delete all,template,daemonset,configmap -l jaeger-infra
 ```
 
 ## Testing
