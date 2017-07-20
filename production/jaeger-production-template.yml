@@ -274,7 +274,7 @@ objects:
             httpGet:
               path: "/"
               port: 16686
-        - image: jpkroehling/keycloak-proxy
+        - image: jboss/keycloak-proxy
           name: ${JAEGER_SERVICE_NAME}-query-security-proxy
           volumeMounts:
           - mountPath: /opt/jboss/conf
