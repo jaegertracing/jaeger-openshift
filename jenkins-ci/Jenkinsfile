@@ -26,7 +26,19 @@ pipeline {
         stage('all-in-one: verify deployment'){
             steps {
                 sh 'oc get dc'
-                openshiftVerifyDeployment apiURL: '', authToken: '', depCfg: 'jaeger', namespace: '', replicaCount: '1', verbose: 'true', verifyReplicaCount: 'true', waitTime: '30', waitUnit: 'min'
+                sh '''
+                	sleep 5 # sleep some time to get proper deploy status
+                	deployNameExpected="jaeger"
+                	deployNameActual=`oc get deploy | grep "${deployNameExpected}" | awk '{print $1}'`
+                	if [[ ${deployNameActual} != ${deployNameExpected} ]];then
+                		echo "'${deployNameExpected}' not found, available list:"
+                		oc get deploy
+                		exit 1
+                	else
+                		echo "'${deployNameExpected}' found, available deploy list:"
+                		oc get deploy
+                	fi
+                '''
             }
         }
         stage('all-in-one: verify services'){
