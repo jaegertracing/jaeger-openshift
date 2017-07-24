@@ -22,7 +22,7 @@ parameters:
   displayName: Image version
   name: IMAGE_VERSION
   required: false
-  value: "0.5"
+  value: "latest"
 
 apiVersion: v1
 kind: Template
