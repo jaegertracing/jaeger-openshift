@@ -86,6 +86,7 @@ objects:
           app: cassandra
           jaeger-infra: cassandra-replica
       spec:
+        terminationGracePeriodSeconds: 1800
         containers:
         - name: cassandra
           image: cassandra:3.11
@@ -106,7 +107,7 @@ objects:
           lifecycle:
             preStop:
               exec:
-                command: ["/bin/sh", "-c", "PID=$(pidof java) && kill $PID && while ps -p $PID > /dev/null; do sleep 1; done"]
+                command: ["/bin/sh", "-c", "nodetool drain"]
           env:
             - name: MAX_HEAP_SIZE
               value: 512M
