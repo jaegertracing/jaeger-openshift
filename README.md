@@ -57,9 +57,6 @@ oc process -f https://raw.githubusercontent.com/jaegertracing/jaeger-openshift/m
 Even though this template uses a stateful Cassandra, backing storage is set to `emptyDir`. It's more
 appropriate to create a `PersistentVolumeClaim`/`PersistentVolume` and use it instead.
 
-Additionally, the Cassandra image is not any officially supported image. This will be changed soon, once
-an official image for OpenShift is released.
-
 ## Using a different version
 
 The templates are using the `latest` version, which is what you probably want at this stage. If you need to
