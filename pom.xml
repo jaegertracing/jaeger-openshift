@@ -86,6 +86,7 @@
             <exclude>header.txt</exclude>
             <exclude>LICENSE</exclude>
             <exclude>**/*.md</exclude>
+            <exclude>jenkins-ci/Jenkinsfile</exclude>
           </excludes>
           <strictCheck>true</strictCheck>
         </configuration>
