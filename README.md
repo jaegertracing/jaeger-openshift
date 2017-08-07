@@ -55,7 +55,9 @@ oc process -f https://raw.githubusercontent.com/jaegertracing/jaeger-openshift/m
 
 ### Persistent storage
 Even though this template uses a stateful Cassandra, backing storage is set to `emptyDir`. It's more
-appropriate to create a `PersistentVolumeClaim`/`PersistentVolume` and use it instead.
+appropriate to create a `PersistentVolumeClaim`/`PersistentVolume` and use it instead. Note that this
+Cassandra deployment does not support deleting pods or scaling down, as this might require
+administrative tasks that are dependent on the final deployment architecture.
 
 ## Using a different version
 
