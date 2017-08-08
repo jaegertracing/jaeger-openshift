@@ -12,46 +12,59 @@ oc process -f https://raw.githubusercontent.com/jaegertracing/jaeger-openshift/m
 Once everything is ready, `oc status` tells you where to find Jaeger URL.
 
 ## Production setup
-This template deploys all Jaeger components as a separate services: StatefulSet Cassandra storage, agent as DaemonSet,
-collector and query service with UI. Each one of those can be managed and scaled individually. Because this template
-deploys the agent as a DaemonSet it requires system:admin permissions, therefore cannot be used in OpenShift online.
+This template deploys the Collector, Query Service (with UI) and Cassandra storage (StatefulSet) as separate individually scalable services.
 
-Install everything in `jaeger` namespace:
+Install everything in `jaeger-infra` namespace:
 ```bash
-oc login -u system:admin
-oc new-project jaeger
-oc process -f https://raw.githubusercontent.com/jaegertracing/jaeger-openshift/master/production/jaeger-production-template.yml | oc create -n jaeger -f -
-```
-
-Give user `developer` permissions to access `jaeger` namespace:
-```bash
-oc policy add-role-to-user cluster-admin developer -n jaeger
+oc new-project jaeger-infra
+oc process -f https://raw.githubusercontent.com/jaegertracing/jaeger-openshift/master/production/jaeger-production-template.yml | oc create -n jaeger-infra -f -
 ```
 
 Note that it's OK to have the Query and Collector pods to be in an error state for the first minute or so. This is
 because these components attempt to connect to Cassandra right away and hard fail if they can't after N attempts.
 
-Your Agent hostname is `jaeger-agent.${NAMESPACE}.svc.cluster.local`
+### Deploying the agent as sidecar
+The Jaeger Agent is designed to be deployed local to your service, so that it can receive traces via UDP keeping your
+application's load minimal. As such, it's ideal to have the Agent to be deployed as a sidecar to your application's component,
+just add it as a container within any struct that supports `spec.containers`, like a `Pod`, `Deployment` and so on.
 
-### Install Jaeger as `developer` user
+For instance, assuming that your application is named `myapp` and the image is for it is `openshift/hello-openshift`, your
+`Deployment` descriptor would be something like:
 
-Jaeger can also be installed as `developer` (or any other user). As the DaemonSet runs at the node level,
-however, your user need to have such permission. It can be achieved by running this:
-
-```bash
-oc login -u developer
-oc new-project jaeger
-
-oc login -u system:admin
-oc create -f https://raw.githubusercontent.com/jaegertracing/jaeger-openshift/master/production/daemonset-admin.yml
-oc adm policy add-role-to-user daemonset-admin developer -n jaeger // jaeger namespace has been already created and it is accessible by developer user
+```yaml
+- apiVersion: extensions/v1beta1
+  kind: Deployment
+  metadata:
+    name: myapp
+  spec:
+    template:
+      metadata:
+        labels:
+          app: myapp
+      spec:
+        containers:
+        - image: openshift/hello-openshift
+          name: myapp
+          ports:
+          - containerPort: 8080
+        - image: jaegertracing/jaeger-agent
+          name: jaeger-agent
+          ports:
+          - containerPort: 5775
+            protocol: UDP
+          - containerPort: 5778
+          - containerPort: 6831
+            protocol: UDP
+          - containerPort: 6832
+            protocol: UDP
+          command:
+          - "/go/bin/agent-linux"
+          - "--collector.host-port=jaeger-collector.jaeger-infra.svc:14267"
 ```
 
-Once that is ready, it's only a matter of creating the components from the template:
-```bash
-oc login -u developer
-oc process -f https://raw.githubusercontent.com/jaegertracing/jaeger-openshift/master/production/jaeger-production-template.yml | oc create -n jaeger -f -
-```
+The Jaeger Agent will then be available to your application at `localhost:5775`/`localhost:6831`/`localhost:6832`.
+In most cases, you don't need to specify a hostname or port to your Jaeger Tracer, as it will default to the right
+values already.
 
 ### Persistent storage
 Even though this template uses a stateful Cassandra, backing storage is set to `emptyDir`. It's more
@@ -60,12 +73,11 @@ Cassandra deployment does not support deleting pods or scaling down, as this mig
 administrative tasks that are dependent on the final deployment architecture.
 
 ## Using a different version
-
 The templates are using the `latest` version, which is what you probably want at this stage. If you need to
 use a specific Docker image version, specify it via the template parameter `IMAGE_VERSION`, as follows:
 
 ```bash
-oc process -f <path-to-template> -p IMAGE_VERSION=<sha> | oc create -n jaeger -f -
+oc process -f <path-to-template> -p IMAGE_VERSION=<sha> | oc create -n jaeger-infra -f -
 ```
 
 A list of tags can be found here:
@@ -76,14 +88,12 @@ Note that the Docker image tags are related to the git commit SHAs:
 `IMAGE_VERSION` latest is the Docker image for `master`
 
 ## Getting an OpenShift cluster running
-
 As a developer looking to try this out locally, the easiest is to use the `oc cluster up` command. Getting
 this command might be as easy as running `dnf install origin-clients` on a recent Fedora desktop. Refer to
 the OpenShift [installation guide or quick start guide](https://install.openshift.com/) for more information.
 Another alternative is to use [`minishift`](https://github.com/minishift/minishift).
 
 ## Uninstalling
-
 If you need to remove the Jaeger components created by this template, run:
 
 ```bash
