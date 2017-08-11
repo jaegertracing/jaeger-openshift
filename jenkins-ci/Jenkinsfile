@@ -51,8 +51,8 @@ pipeline {
       steps{
         withEnv(["JAVA_HOME=${ tool 'jdk8' }", "PATH+MAVEN=${tool 'maven-3.5.0'}/bin:${env.JAVA_HOME}/bin"]) {
           sh '''
-            export JAEGER_QUERY_HOST="jaeger-query.jaeger-ci.svc"
-            export JAEGER_AGENT_HOST="jaeger-agent.jaeger-ci.svc"
+            export JAEGER_QUERY_HOST="jaeger-query"
+            export JAEGER_AGENT_HOST="jaeger-agent"
             export JAEGER_PORT_QUERY_HTTP=80
             export JAEGER_PORT_AGENT_ZIPKIN_THRIFT=5775
             export JAEGER_PORT_AGENT_COMPACT=6831
@@ -94,6 +94,7 @@ pipeline {
           echo "Before deploy jaeger:"
           oc get all
           oc process -f production/jaeger-production-template.yml | oc create -f -
+          oc process -f jenkins-ci/jaeger-agent-template.yml | oc create -f -
           echo "After deploy jaeger:"
           oc get all
         '''
@@ -123,16 +124,16 @@ pipeline {
     stage('production: verify services'){
       steps{
         sh 'oc get services'
-        openshiftVerifyService apiURL: '', authToken: '', namespace: '', svcName: 'jaeger-query', verbose: 'false'
         openshiftVerifyService apiURL: '', authToken: '', namespace: '', svcName: 'jaeger-collector', verbose: 'false'
+        openshiftVerifyService apiURL: '', authToken: '', namespace: '', svcName: 'jaeger-query', verbose: 'false'
       }
     }
     stage('production: functional test'){
       steps{
         withEnv(["JAVA_HOME=${ tool 'jdk8' }", "PATH+MAVEN=${tool 'maven-3.5.0'}/bin:${env.JAVA_HOME}/bin"]) {
           sh '''
-            export JAEGER_QUERY_HOST="jaeger-query.jaeger-ci.svc"
-            export JAEGER_AGENT_HOST="jaeger-agent.jaeger-ci.svc"
+            export JAEGER_QUERY_HOST="jaeger-query"
+            export JAEGER_AGENT_HOST="jaeger-agent"
             export JAEGER_PORT_QUERY_HTTP=80
             export JAEGER_PORT_AGENT_ZIPKIN_THRIFT=5775
             export JAEGER_PORT_AGENT_COMPACT=6831

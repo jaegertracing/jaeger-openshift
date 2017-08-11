@@ -14,12 +14,7 @@ Login as a `root` user on the OpenShift cluster machine and execute the followin
 ```bash
 oc login -u jenkinsci
 oc new-project jaeger-ci
-oc login -u system:admin
-oc create -f https://raw.githubusercontent.com/jaegertracing/jaeger-openshift/master/production/daemonset-admin.yml
-oc adm policy add-role-to-user daemonset-admin jenkinsci -n jaeger-ci
 ```
-
-**Important:** When there is a change on [daemonset-admin.yml](/production/daemonset-admin.yml) file, needs to updated on OpenShift cluster machine.
 
 #### Setup Jenkins instance on OpenShift
 We have two flavors of Jenkins for Openshift. 1. `jenkins-persistent`, 2. `jenkins-ephemeral`. In this document, We choose the second option. To know more about Jenkins on Openshift read [this page](https://github.com/openshift/origin/tree/master/examples/jenkins)
@@ -94,9 +89,11 @@ Jenkins pipeline script is located [here](/jenkins-ci/Jenkinsfile)
 * Under the section `Projects` >> `GitHub Organization`
 	* Set `Owner` as `jaegertracing`
 	* Set `Repository name pattern` as `jaeger-openshift`
-	* Set `Include branches` as `master`
+	* Set `Include branches` as `master PR-*`
 	* Set `Project Recognizers` >> `Script Path` as `jenkins-ci/Jenkinsfile`
 * Set `Scan Organization Triggers` >> `Periodically if not otherwise run` >> `Interval` as `1 minute`
 * Save the project
+
+![jenkins-job](docs/images/jenkins-job-details.png "Jenkins job")
 
 All set ready :)
