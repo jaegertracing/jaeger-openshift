@@ -23,6 +23,11 @@ parameters:
   name: IMAGE_VERSION
   required: false
   value: "latest"
+- description: The name of the Jaeger Zipkin Service.
+  displayName: Jaeger Zipkin Service Name
+  name: JAEGER_ZIPKIN_SERVICE_NAME
+  required: true
+  value: zipkin
 
 apiVersion: v1
 kind: Template
@@ -58,7 +63,10 @@ objects:
           jaeger-infra: jaeger-pod
       spec:
           containers:
-            - image: jaegertracing/all-in-one:${IMAGE_VERSION}
+            - env:
+              - name: COLLECTOR_ZIPKIN_HTTP_PORT
+                value: "9411"
+              image: jaegertracing/all-in-one:${IMAGE_VERSION}
               name: ${JAEGER_SERVICE_NAME}
               ports:
                 - containerPort: 5775
@@ -68,6 +76,8 @@ objects:
                 - containerPort: 6832
                   protocol: UDP
                 - containerPort: 16686
+                  protocol: TCP
+                - containerPort: 9411
                   protocol: TCP
               readinessProbe:
                 httpGet:
@@ -107,6 +117,10 @@ objects:
       port: 14268
       protocol: TCP
       targetPort: 14268
+    - name: jaeger-collector-zipkin
+      port: 9411
+      protocol: TCP
+      targetPort: 9411
     selector:
       jaeger-infra: jaeger-pod
     type: ClusterIP
@@ -134,6 +148,22 @@ objects:
     clusterIP: None
     selector:
       jaeger-infra: jaeger-pod
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: ${JAEGER_ZIPKIN_SERVICE_NAME}
+    labels:
+      app: jaeger
+      jaeger-infra: zipkin-service
+  spec:
+    ports:
+    - name: jaeger-zipkin-http
+      port: 9411
+      protocol: TCP
+      targetPort: 9411
+    selector:
+      jaeger-infra: jaeger-pod
+    type: ClusterIP
 - apiVersion: v1
   kind: Route
   metadata:

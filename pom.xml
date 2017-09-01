@@ -29,6 +29,8 @@
     <rootProject.basedir>${project.basedir}</rootProject.basedir>
 
     <version.com.squareup.okhttp3-okhttp>3.8.0</version.com.squareup.okhttp3-okhttp>
+    <version.io.zipkin.brave>4.5.1</version.io.zipkin.brave>
+    <version.io.zipkin.reporter>1.0.0</version.io.zipkin.reporter>
     <version.junit>4.12</version.junit>
     <version.org.awaitility-awaitility>3.0.0</version.org.awaitility-awaitility>
     <version.org.arquillian.cube>1.4.0</version.org.arquillian.cube>
