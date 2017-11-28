@@ -1,164 +1,93 @@
 pipeline {
-  agent any
+    agent any
+
+    options {
+        disableConcurrentBuilds()
+        timeout(time: 1, unit: 'HOURS')
+    }
+    environment {
+        JAEGER_QUERY_HOST="jaeger-query"
+        JAEGER_AGENT_HOST="jaeger-agent"
+        JAEGER_COLLECTOR_HOST="jaeger-collector"
+        JAEGER_PORT_QUERY_HTTP=80
+        JAEGER_PORT_AGENT_ZIPKIN_THRIFT=5775
+        JAEGER_PORT_AGENT_COMPACT=6831
+        JAEGER_PORT_AGENT_BINARY=6832
+        JAEGER_PORT_ZIPKIN_COLLECTOR=14268
+    }
     stages {
-      stage('all-in-one: clean environment') { 
-        steps { 
-          sh '''
-            echo "Before clean environment:"
-              oc get all
-              oc delete all,template,daemonset,configmap -l jaeger-infra
-              echo "After clean environment:"
-              oc get all
-          '''
+        stage('all-in-one: clean environment') {
+            steps {
+                sh 'oc delete all,template,daemonset,configmap -l jaeger-infra'
+            }
+        }
+        stage('all-in-one: deploy Jaeger') {
+            steps {
+                checkout scm
+                sh 'oc process -f all-in-one/jaeger-all-in-one-template.yml | oc create -f -'
+            }
+        }
+        stage('all-in-one: verify services'){
+            steps{
+                openshiftVerifyService apiURL: '', authToken: '', namespace: '', svcName: 'jaeger-query', verbose: 'false'
+                openshiftVerifyService apiURL: '', authToken: '', namespace: '', svcName: 'jaeger-collector', verbose: 'false'
+            }
+        }
+        stage('all-in-one: functional test'){
+            steps{
+                withEnv(["JAVA_HOME=${ tool 'jdk8' }", "PATH+MAVEN=${tool 'maven-3.5.2'}/bin:${env.JAVA_HOME}/bin"]) {
+                    sh '''
+                        export USE_COLLECTOR_OR_AGENT=agent
+                        rm ./jaeger-java-test -rf
+                        git clone https://github.com/Hawkular-QE/jaeger-java-test.git
+                        cd jaeger-java-test
+                        mvn clean test
+                    '''
+                }
+            }
+        }
+        stage('all-in-one: delete all') {
+            steps {
+                sh 'oc delete all,template,daemonset,configmap -l jaeger-infra'
+            }
+        }
+        stage('production: deploy Cassandra') {
+            steps {
+                sh 'oc create -f production/cassandra.yml'
+            }
+        }
+        /* TODO if possible verify Cassandra deployment before proceeding  */
+        stage('production: deploy Jaeger') {
+            steps {
+                sh 'oc process -f production/jaeger-production-template.yml | oc create -f -'
+            }
+        }
+        stage('production: verify Jaeger services'){
+            steps{
+                openshiftVerifyService apiURL: '', authToken: '', namespace: '', svcName: 'jaeger-collector', verbose: 'false'
+                openshiftVerifyService apiURL: '', authToken: '', namespace: '', svcName: 'jaeger-query', verbose: 'false'
+            }
+        }
+        stage('production: functional test'){
+            steps{
+                withEnv(["JAVA_HOME=${ tool 'jdk8' }", "PATH+MAVEN=${tool 'maven-3.5.2'}/bin:${env.JAVA_HOME}/bin"]) {
+                sh '''
+                    export USE_COLLECTOR_OR_AGENT=collector
+                    rm ./jaeger-java-test -rf
+                    git clone https://github.com/Hawkular-QE/jaeger-java-test.git
+                    cd jaeger-java-test
+                    mvn clean test
+                '''
+                }
+            }
+        }
+        stage('production: delete all') {
+            steps {
+                sh 'oc delete all,template,daemonset,configmap -l jaeger-infra'
+            }
         }
     }
-    stage('all-in-one: deploy Jaeger') { 
-      steps { 
-        sh '''
-          echo "Before deploy jaeger:"
-          oc get all
-          oc process -f all-in-one/jaeger-all-in-one-template.yml | oc create -f -
-          echo "After deploy jaeger:"
-          oc get all
-        '''
-      }
-    }
-    stage('all-in-one: verify deployment'){
-      steps {
-        sh '''
-          oc get deploy
-          sleep 5 # sleep some time to get proper deploy status
-          deployNameExpected="jaeger"
-          deployNameActual=`oc get deploy | grep "${deployNameExpected}" | awk '{print $1}'`
-          if [[ ${deployNameActual} != ${deployNameExpected} ]];then
-            echo "'${deployNameExpected}' not found, available list:"
-            oc get deploy
-            exit 1
-          else
-            echo "'${deployNameExpected}' found, available deploy list:"
-            oc get deploy
-          fi
-        '''
-      }
-    }
-    stage('all-in-one: verify services'){
-      steps{
-        sh 'oc get services'
-        openshiftVerifyService apiURL: '', authToken: '', namespace: '', svcName: 'jaeger-query', verbose: 'false'
-      }
-    }
-    stage('all-in-one: functional test'){
-      steps{
-        withEnv(["JAVA_HOME=${ tool 'jdk8' }", "PATH+MAVEN=${tool 'maven-3.5.0'}/bin:${env.JAVA_HOME}/bin"]) {
-          sh '''
-            export JAEGER_QUERY_HOST="jaeger-query"
-            export JAEGER_AGENT_HOST="jaeger-agent"
-            export JAEGER_PORT_QUERY_HTTP=80
-            export JAEGER_PORT_AGENT_ZIPKIN_THRIFT=5775
-            export JAEGER_PORT_AGENT_COMPACT=6831
-            export JAEGER_PORT_AGENT_BINARY=6832
-            export JAEGER_PORT_ZIPKIN_COLLECTOR=14268
-            rm ./jaeger-java-test -rf
-            git clone https://github.com/Hawkular-QE/jaeger-java-test.git
-            cd jaeger-java-test
-            mvn test
-          '''
-        }
-      }
-    }
-    stage('all-in-one: delete all') {
-      steps {
-        sh '''
-          echo "Before clean environment:"
-          oc get all
-          oc delete all,template,daemonset,configmap -l jaeger-infra
-          echo "After clean environment:"
-          oc get all
-        '''
-      }
-    }
-    stage('production: clean environment') { 
-      steps { 
-        sh '''
-          echo "Before clean environment:"
-          oc get all
-          oc delete all,template,daemonset,configmap -l jaeger-infra
-          echo "After clean environment:"
-          oc get all
-        '''
-      }
-    }
-    stage('production: deploy Jaeger') { 
-      steps { 
-        sh '''
-          echo "Before deploy jaeger:"
-          oc get all
-          oc process -f production/jaeger-production-template.yml | oc create -f -
-          oc process -f jenkins-ci/jaeger-agent-template.yml | oc create -f -
-          echo "After deploy jaeger:"
-          oc get all
-        '''
-      }
-    }
-    stage('production: verify deployment'){
-      steps {
-        sh 'oc get dc'
-        sh '''
-          sleep 5 # sleep some time to get proper deploy status
-          deployNamesExpected=( "jaeger-query" "jaeger-collector")
-          for deployNameExpected in ${deployNamesExpected[@]}
-          do
-            deployNameActual=`oc get deploy | grep "${deployNameExpected}" | awk '{print $1}'`
-            if [[ ${deployNameActual} != ${deployNameExpected} ]];then
-              echo "'${deployNameExpected}' not found, available list:"
-              oc get deploy
-              exit 1
-            else
-              echo "'${deployNameExpected}' found, available deploy list:"
-              oc get deploy
-            fi
-          done
-        '''
-      }
-    }
-    stage('production: verify services'){
-      steps{
-        sh 'oc get services'
-        openshiftVerifyService apiURL: '', authToken: '', namespace: '', svcName: 'jaeger-collector', verbose: 'false'
-        openshiftVerifyService apiURL: '', authToken: '', namespace: '', svcName: 'jaeger-query', verbose: 'false'
-      }
-    }
-    stage('production: functional test'){
-      steps{
-        withEnv(["JAVA_HOME=${ tool 'jdk8' }", "PATH+MAVEN=${tool 'maven-3.5.0'}/bin:${env.JAVA_HOME}/bin"]) {
-          sh '''
-            export JAEGER_QUERY_HOST="jaeger-query"
-            export JAEGER_AGENT_HOST="jaeger-agent"
-            export JAEGER_PORT_QUERY_HTTP=80
-            export JAEGER_PORT_AGENT_ZIPKIN_THRIFT=5775
-            export JAEGER_PORT_AGENT_COMPACT=6831
-            export JAEGER_PORT_AGENT_BINARY=6832
-            export JAEGER_PORT_ZIPKIN_COLLECTOR=14268
-            rm ./jaeger-java-test -rf
-            git clone https://github.com/Hawkular-QE/jaeger-java-test.git
-            cd jaeger-java-test
-            mvn test
-          '''
-        }
-      }
-    }
-    stage('production: delete all') {
-      steps {
-        sh '''
-          echo "Before clean environment:"
-          oc get all
-          oc delete all,template,daemonset,configmap -l jaeger-infra
-          echo "After clean environment:"
-          oc get all
-        '''
-      }
-    }
-  }
+
   post {
     always {
       sh '''
