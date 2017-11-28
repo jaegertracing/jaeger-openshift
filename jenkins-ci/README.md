@@ -64,6 +64,13 @@ in both the `Overall` and `Job` categories
 To publish PR status and console log back to GitHub, Jenkins needs GitHub authentication token with required permission. 
 To create GitHub access token follow [this document](https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/)
 
+When creating the token, choose the following permissions under `Select scopes`
+* repo
+* admin:repo_hook
+* notifications
+
+Then create a credential on Jenkins:
+
 * Login to Jenkins console
 * Go to `Credentials` >> `System` >> `Global credentials (unrestricted)` >> `Add Credentials`
 * Select `Kind` as `Username with password`
