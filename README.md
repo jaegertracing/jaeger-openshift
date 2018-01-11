@@ -19,6 +19,8 @@ The Jaeger Collector and Query require a backing storage to exist before being s
 templates, we provide a basic template to deploy Cassandra. It is not ready for production and should be adapted before any
 real usage.
 
+#### Cassandra 
+
 To use our Cassandra template:
 
     oc create -f https://raw.githubusercontent.com/jaegertracing/jaeger-openshift/master/production/cassandra.yml
@@ -29,6 +31,11 @@ to wait for this job to finish before deploying the Jaeger components. To check 
     oc get job jaeger-cassandra-schema-job
 
 The job should have `1` in the `SUCCESSFUL` column.
+
+#### Elasticsearch
+To use our Elasticsearch template:
+
+    oc create -f https://raw.githubusercontent.com/jaegertracing/jaeger-openshift/master/production/elasticsearch.yml
 
 ### Jaeger configuration
 
@@ -126,10 +133,10 @@ the OpenShift [installation guide or quick start guide](https://install.openshif
 Another alternative is to use [`minishift`](https://github.com/minishift/minishift).
 
 ## Uninstalling
-If you need to remove the Jaeger components created by this template, run:
+If you need to remove the all Jaeger components created by this template, run:
 
 ```bash
-oc delete all,template,daemonset -l jaeger-infra
+oc delete all,template,configmap -l jaeger-infra
 ```
 
 ## Testing
