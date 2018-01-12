@@ -80,6 +80,12 @@ objects:
           volumeMounts:
           - name: jaeger-configuration-volume
             mountPath: /conf
+          env:
+          - name: SPAN_STORAGE_TYPE
+            valueFrom:
+              configMapKeyRef:
+                name: jaeger-configuration
+                key: span-storage-type
         volumes:
           - configMap:
               name: jaeger-configuration
@@ -160,6 +166,12 @@ objects:
           volumeMounts:
           - name: jaeger-configuration-volume
             mountPath: /conf
+          env:
+          - name: SPAN_STORAGE_TYPE
+            valueFrom:
+              configMapKeyRef:
+                name: jaeger-configuration
+                key: span-storage-type
         volumes:
           - configMap:
               name: jaeger-configuration

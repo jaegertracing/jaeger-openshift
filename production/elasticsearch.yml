@@ -23,17 +23,14 @@ items:
       app: jaeger
       jaeger-infra: configuration
   data:
+    span-storage-type: elasticsearch
     collector: |
       collector:
         zipkin:
           http-port: 9411
-      span-storage:
-        type: elasticsearch
       es:
         server-urls: http://elasticsearch:9200
     query: |
-      span-storage:
-        type: elasticsearch
       es:
         server-urls: http://elasticsearch:9200
       query:
