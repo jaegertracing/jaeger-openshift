@@ -51,37 +51,73 @@ pipeline {
                 sh 'oc delete all,template,daemonset,configmap -l jaeger-infra'
             }
         }
-        stage('production: deploy Cassandra') {
+        stage('production-cassandra: deploy Cassandra') {
             steps {
                 sh 'oc create -f production/cassandra.yml'
             }
         }
         /* TODO if possible verify Cassandra deployment before proceeding  */
-        stage('production: deploy Jaeger') {
+        stage('production-cassandra: deploy Jaeger') {
             steps {
                 sh 'oc process -f production/jaeger-production-template.yml | oc create -f -'
             }
         }
-        stage('production: verify Jaeger services'){
+        stage('production-cassandra: verify Jaeger services'){
             steps{
                 openshiftVerifyService apiURL: '', authToken: '', namespace: '', svcName: 'jaeger-collector', verbose: 'false'
                 openshiftVerifyService apiURL: '', authToken: '', namespace: '', svcName: 'jaeger-query', verbose: 'false'
             }
         }
-        stage('production: functional test'){
+        stage('production-cassandra: functional test'){
             steps{
                 withEnv(["JAVA_HOME=${ tool 'jdk8' }", "PATH+MAVEN=${tool 'maven-3.5.2'}/bin:${env.JAVA_HOME}/bin"]) {
                 sh '''
                     export USE_COLLECTOR_OR_AGENT=collector
                     rm ./jaeger-java-test -rf
                     git clone https://github.com/Hawkular-QE/jaeger-java-test.git
+                    export JAEGER_FLUSH_INTERVAL=2500
                     cd jaeger-java-test
                     mvn clean test
                 '''
                 }
             }
         }
-        stage('production: delete all') {
+        stage('production-cassandra: delete all') {
+            steps {
+                sh 'oc delete all,template,daemonset,configmap -l jaeger-infra'
+            }
+        }
+        stage('production-elastic: deploy elasticsearch') {
+            steps {
+                sh 'oc create -f production/elasticsearch.yml'
+            }
+        }
+        stage('production-elastic: deploy Jaeger') {
+            steps {
+                sh 'oc process -f production/jaeger-production-template.yml | oc create -f -'
+            }
+        }
+        stage('production-elastic: verify Jaeger services'){
+            steps{
+                openshiftVerifyService apiURL: '', authToken: '', namespace: '', svcName: 'jaeger-collector', verbose: 'false'
+                openshiftVerifyService apiURL: '', authToken: '', namespace: '', svcName: 'jaeger-query', verbose: 'false'
+            }
+        }
+        stage('production-elastic: functional test'){
+            steps{
+                withEnv(["JAVA_HOME=${ tool 'jdk8' }", "PATH+MAVEN=${tool 'maven-3.5.2'}/bin:${env.JAVA_HOME}/bin"]) {
+                    sh '''
+                        export USE_COLLECTOR_OR_AGENT=collector
+                        rm ./jaeger-java-test -rf
+                        git clone https://github.com/Hawkular-QE/jaeger-java-test.git
+                        cd jaeger-java-test
+                        export JAEGER_FLUSH_INTERVAL=2500
+                        mvn clean test
+                    '''
+                }
+            }
+        }
+        stage('production-elastic: delete all') {
             steps {
                 sh 'oc delete all,template,daemonset,configmap -l jaeger-infra'
             }
