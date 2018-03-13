@@ -129,19 +129,15 @@ be able to create arbitrary spans.
 It's advisable to put an OAuth Security Proxy in front of the collector and expose this proxy instead.
 
 ## Using a different version
-The templates are using the `latest` version, which is what you probably want at this stage. If you need to
-use a specific Docker image version, specify it via the template parameter `IMAGE_VERSION`, as follows:
+The templates are using a specific version and `latest` in `all-in-one` template. If you need to
+use a different Docker image version, specify it via the template parameter `IMAGE_VERSION`, as follows:
 
 ```bash
-oc process -f <path-to-template> -p IMAGE_VERSION=<sha> | oc create -n jaeger-infra -f -
+oc process -f <path-to-template> -p IMAGE_VERSION=<version> | oc create -n jaeger-infra -f -
 ```
 
 A list of tags can be found here:
-https://hub.docker.com/r/jaegertracing/all-in-one/tags/
-
-Note that the Docker image tags are related to the git commit SHAs:
-`IMAGE_VERSION` 6942fec0 is the Docker image for https://github.com/uber/jaeger/commit/6942fec
-`IMAGE_VERSION` latest is the Docker image for `master`
+https://hub.docker.com/r/jaegertracing/
 
 ## Getting an OpenShift cluster running
 As a developer looking to try this out locally, the easiest is to use the `oc cluster up` command. Getting
