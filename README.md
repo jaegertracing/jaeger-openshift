@@ -121,7 +121,7 @@ oc create route edge --service=jaeger-collector --port jaeger-collector-http --i
 ```
 
 This allows clients to send data directly to Collector via HTTP senders. If you want to use the Agent then use
-[ExternalIP or NodePort](https://docs.openshift.com/container-platform/3.3/dev_guide/getting_traffic_into_cluster.htm)
+[ExternalIP or NodePort](https://docs.openshift.com/container-platform/3.3/dev_guide/getting_traffic_into_cluster.html)
 to expose the Collector service.
 
 Note that doing so will open the collector to be used by any external party, who will then 
