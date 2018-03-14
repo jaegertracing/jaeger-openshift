@@ -59,6 +59,7 @@ pipeline {
         /* TODO if possible verify Cassandra deployment before proceeding  */
         stage('production-cassandra: deploy Jaeger') {
             steps {
+                sh 'oc create -f production/configmap-cassandra.yml'
                 sh 'oc process -f production/jaeger-production-template.yml | oc create -f -'
             }
         }
@@ -94,6 +95,7 @@ pipeline {
         }
         stage('production-elastic: deploy Jaeger') {
             steps {
+                sh 'oc create -f production/configmap-elasticsearch.yml'
                 sh 'oc process -f production/jaeger-production-template.yml | oc create -f -'
             }
         }

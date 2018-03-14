@@ -23,7 +23,8 @@ real usage.
 
 To use our Cassandra template:
 
-    oc create -f https://raw.githubusercontent.com/jaegertracing/jaeger-openshift/master/production/cassandra.yml
+    oc create -f production/cassandra.yml
+    oc create -f production/configmap-cassandra.yml
 
 The Cassandra template includes also a Kubernetes `Job` that creates the schema required by the Jaeger components. It's advisable
 to wait for this job to finish before deploying the Jaeger components. To check the status of the job, run:
@@ -35,7 +36,8 @@ The job should have `1` in the `SUCCESSFUL` column.
 #### Elasticsearch
 To use our Elasticsearch template:
 
-    oc create -f https://raw.githubusercontent.com/jaegertracing/jaeger-openshift/master/production/elasticsearch.yml
+    oc create -f production/elasticsearch.yml
+    oc create -f production/configmap-elasticsearch.yml
 
 ### Jaeger configuration
 
@@ -51,7 +53,7 @@ If changes are required for the configuration, the `edit` command can be used:
 
 The main production template deploys the Collector and the Query Service (with UI) as separate individually scalable services.
 
-    oc process -f https://raw.githubusercontent.com/jaegertracing/jaeger-openshift/master/production/jaeger-production-template.yml | oc create -f -
+    oc process -f production/jaeger-production-template.yml | oc create -f -
 
 If the backing storage is not ready by the time the Collector/Agent start, they will fail and Kubernetes will reschedule the
 pod. It's advisable to either wait for the backing storage to estabilize, or to ignore such failures for the first few minutes.
