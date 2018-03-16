@@ -16,8 +16,9 @@ pipeline {
         JAEGER_PORT_ZIPKIN_COLLECTOR=14268
     }
     stages {
-        stage('all-in-one: clean environment') {
+        stage('Clean all') {
             steps {
+                sh 'oc delete -f https://raw.githubusercontent.com/RHsyseng/docker-rhel-elasticsearch/5.x/es-cluster-deployment.yml --grace-period=1'
                 sh 'oc delete all,template,daemonset,configmap -l jaeger-infra'
             }
         }
@@ -90,7 +91,7 @@ pipeline {
         }
         stage('production-elastic: deploy elasticsearch') {
             steps {
-                sh 'oc create -f production/elasticsearch.yml'
+                sh 'oc create -f https://raw.githubusercontent.com/RHsyseng/docker-rhel-elasticsearch/5.x/es-cluster-deployment.yml'
             }
         }
         stage('production-elastic: deploy Jaeger') {
@@ -121,6 +122,7 @@ pipeline {
         }
         stage('production-elastic: delete all') {
             steps {
+                sh 'oc delete -f https://raw.githubusercontent.com/RHsyseng/docker-rhel-elasticsearch/5.x/es-cluster-deployment.yml --grace-period=1'
                 sh 'oc delete all,template,daemonset,configmap -l jaeger-infra'
             }
         }
