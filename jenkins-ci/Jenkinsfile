@@ -18,7 +18,7 @@ pipeline {
     stages {
         stage('Clean all') {
             steps {
-                sh 'oc delete -f https://raw.githubusercontent.com/RHsyseng/docker-rhel-elasticsearch/5.x/es-cluster-deployment.yml --grace-period=1'
+                sh 'oc delete -f https://raw.githubusercontent.com/RHsyseng/docker-rhel-elasticsearch/5.x/es-cluster-deployment.yml --grace-period=1 || true'
                 sh 'oc delete all,template,daemonset,configmap -l jaeger-infra'
             }
         }
