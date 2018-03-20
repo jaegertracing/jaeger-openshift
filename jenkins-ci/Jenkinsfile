@@ -89,9 +89,21 @@ pipeline {
                 sh 'oc delete all,template,daemonset,configmap -l jaeger-infra'
             }
         }
+        /* TODO  get namespace from environment */
         stage('production-elastic: deploy elasticsearch') {
             steps {
                 sh 'oc create -f https://raw.githubusercontent.com/RHsyseng/docker-rhel-elasticsearch/5.x/es-cluster-deployment.yml'
+                sh '''
+                  while true; do
+                      replicas=$(oc get statefulset/elasticsearch -o=jsonpath='{.status.readyReplicas}')
+                      ((replicas > 1)) && break
+                      sleep 1
+                  done
+                '''
+                sh 'oc env statefulset/elasticsearch NAMESPACE=jaeger-test -n jaeger-test'
+                sh 'oc adm policy add-role-to-user view -z elasticsearch'
+                /* Restart to apply changes */
+                sh 'oc delete po -l app=elasticsearch'
             }
         }
         stage('production-elastic: deploy Jaeger') {
