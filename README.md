@@ -169,3 +169,6 @@ Tracer may sometimes fail to resolve Jaeger's address. In such case run the foll
 ```bash
 sudo iptables -F
 ```
+
+## License
+[Apache-2.0 License](./LICENSE)
