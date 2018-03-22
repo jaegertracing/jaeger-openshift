@@ -39,6 +39,10 @@ To use our Elasticsearch template:
     oc create -f production/elasticsearch.yml
     oc create -f production/configmap-elasticsearch.yml
 
+The Elasticsearch template in this repository deploys only one node and overall it's not production quality!
+We encourage you to use other templates, for example [docker-rhel-elasticsearch](https://github.com/RHsyseng/docker-rhel-elasticsearch).
+This Elasticsearch deployment is also used by integration tests for this repository.
+
 ### Jaeger configuration
 
 The Jaeger Collector, Query and Agent require a `ConfigMap` to exist on the same namespace, named `jaeger-configuration`.
