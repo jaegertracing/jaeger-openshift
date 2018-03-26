@@ -75,9 +75,6 @@ pipeline {
                 withEnv(["JAVA_HOME=${ tool 'jdk8' }", "PATH+MAVEN=${tool 'maven-3.5.2'}/bin:${env.JAVA_HOME}/bin"]) {
                 sh '''
                     export USE_COLLECTOR_OR_AGENT=collector
-                    rm ./jaeger-java-test -rf
-                    git clone https://github.com/Hawkular-QE/jaeger-java-test.git
-                    export JAEGER_FLUSH_INTERVAL=2500
                     cd jaeger-java-test
                     mvn clean test
                 '''
@@ -123,10 +120,21 @@ pipeline {
                 withEnv(["JAVA_HOME=${ tool 'jdk8' }", "PATH+MAVEN=${tool 'maven-3.5.2'}/bin:${env.JAVA_HOME}/bin"]) {
                     sh '''
                         export USE_COLLECTOR_OR_AGENT=collector
-                        rm ./jaeger-java-test -rf
-                        git clone https://github.com/Hawkular-QE/jaeger-java-test.git
                         cd jaeger-java-test
-                        export JAEGER_FLUSH_INTERVAL=2500
+                        mvn clean test
+                    '''
+                }
+            }
+        }
+        stage('production-elastic: functional test with edge route'){
+            steps{
+                withEnv(["JAVA_HOME=${ tool 'jdk8' }", "PATH+MAVEN=${tool 'maven-3.5.2'}/bin:${env.JAVA_HOME}/bin"]) {
+                    sh '''
+                        export USE_COLLECTOR_OR_AGENT=collector
+                        oc create route edge --service=jaeger-collector --port jaeger-collector-http --insecure-policy=Allow
+                        export JAEGER_COLLECTOR_HOST=`oc get route jaeger-collector --output=go-template={{.spec.host}}`
+                        export JAEGER_PORT_ZIPKIN_COLLECTOR=80
+                        cd jaeger-java-test
                         mvn clean test
                     '''
                 }
