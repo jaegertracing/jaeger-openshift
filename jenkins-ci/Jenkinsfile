@@ -5,6 +5,10 @@ pipeline {
         disableConcurrentBuilds()
         timeout(time: 1, unit: 'HOURS')
     }
+    tools {
+        maven 'maven-3.5.3'
+        jdk 'jdk8'
+    }
     environment {
         JAEGER_QUERY_HOST="jaeger-query"
         JAEGER_AGENT_HOST="jaeger-agent"
@@ -18,38 +22,39 @@ pipeline {
     stages {
         stage('Clean all') {
             steps {
-                sh 'oc delete -f https://raw.githubusercontent.com/RHsyseng/docker-rhel-elasticsearch/5.x/es-cluster-deployment.yml --grace-period=1 || true'
-                sh 'oc delete all,template,daemonset,configmap -l jaeger-infra'
+                sh '''
+                    cat << EOF > cleanup.sh
+                    oc delete -f https://raw.githubusercontent.com/RHsyseng/docker-rhel-elasticsearch/5.x/es-cluster-deployment.yml --grace-period=1 || true
+                    oc delete all,template,daemonset,configmap -l jaeger-infra
+EOF
+                    chmod +x cleanup.sh
+                    ./cleanup.sh
+                '''
+
             }
         }
         stage('all-in-one: deploy Jaeger') {
             steps {
                 checkout scm
                 sh 'oc process -f all-in-one/jaeger-all-in-one-template.yml | oc create -f -'
-            }
-        }
-        stage('all-in-one: verify services'){
-            steps{
                 openshiftVerifyService apiURL: '', authToken: '', namespace: '', svcName: 'jaeger-query', verbose: 'false'
                 openshiftVerifyService apiURL: '', authToken: '', namespace: '', svcName: 'jaeger-collector', verbose: 'false'
             }
         }
         stage('all-in-one: functional test'){
             steps{
-                withEnv(["JAVA_HOME=${ tool 'jdk8' }", "PATH+MAVEN=${tool 'maven-3.5.2'}/bin:${env.JAVA_HOME}/bin"]) {
-                    sh '''
-                        export USE_COLLECTOR_OR_AGENT=agent
-                        rm ./jaeger-java-test -rf
-                        git clone https://github.com/Hawkular-QE/jaeger-java-test.git
-                        cd jaeger-java-test
-                        mvn clean test
-                    '''
-                }
+                sh '''
+                    export USE_COLLECTOR_OR_AGENT=agent
+                    rm ./jaeger-java-test -rf
+                    git clone https://github.com/Hawkular-QE/jaeger-java-test.git
+                    cd jaeger-java-test
+                    mvn clean test
+                '''
             }
         }
         stage('all-in-one: delete all') {
             steps {
-                sh 'oc delete all,template,daemonset,configmap -l jaeger-infra'
+                sh './cleanup.sh'
             }
         }
         stage('production-cassandra: deploy Cassandra') {
@@ -62,28 +67,22 @@ pipeline {
             steps {
                 sh 'oc create -f production/configmap-cassandra.yml'
                 sh 'oc process -f production/jaeger-production-template.yml | oc create -f -'
-            }
-        }
-        stage('production-cassandra: verify Jaeger services'){
-            steps{
                 openshiftVerifyService apiURL: '', authToken: '', namespace: '', svcName: 'jaeger-collector', verbose: 'false'
                 openshiftVerifyService apiURL: '', authToken: '', namespace: '', svcName: 'jaeger-query', verbose: 'false'
             }
         }
         stage('production-cassandra: functional test'){
             steps{
-                withEnv(["JAVA_HOME=${ tool 'jdk8' }", "PATH+MAVEN=${tool 'maven-3.5.2'}/bin:${env.JAVA_HOME}/bin"]) {
                 sh '''
                     export USE_COLLECTOR_OR_AGENT=collector
                     cd jaeger-java-test
                     mvn clean test
                 '''
-                }
             }
         }
         stage('production-cassandra: delete all') {
             steps {
-                sh 'oc delete all,template,daemonset,configmap -l jaeger-infra'
+                sh './cleanup.sh'
             }
         }
         /* TODO  get namespace from environment */
@@ -97,7 +96,7 @@ pipeline {
                       sleep 1
                   done
                 '''
-                sh 'oc env statefulset/elasticsearch NAMESPACE=jaeger-test -n jaeger-test'
+                sh 'oc env statefulset/elasticsearch NAMESPACE=${PROJECT_NAME} -n ${PROJECT_NAME}'
                 sh 'oc adm policy add-role-to-user view -z elasticsearch'
                 /* Restart to apply changes */
                 sh 'oc delete po -l app=elasticsearch'
@@ -107,43 +106,34 @@ pipeline {
             steps {
                 sh 'oc create -f production/configmap-elasticsearch.yml'
                 sh 'oc process -f production/jaeger-production-template.yml | oc create -f -'
-            }
-        }
-        stage('production-elastic: verify Jaeger services'){
-            steps{
                 openshiftVerifyService apiURL: '', authToken: '', namespace: '', svcName: 'jaeger-collector', verbose: 'false'
                 openshiftVerifyService apiURL: '', authToken: '', namespace: '', svcName: 'jaeger-query', verbose: 'false'
             }
         }
         stage('production-elastic: functional test'){
-            steps{
-                withEnv(["JAVA_HOME=${ tool 'jdk8' }", "PATH+MAVEN=${tool 'maven-3.5.2'}/bin:${env.JAVA_HOME}/bin"]) {
-                    sh '''
-                        export USE_COLLECTOR_OR_AGENT=collector
-                        cd jaeger-java-test
-                        mvn clean test
-                    '''
-                }
+            steps {
+                sh '''
+                    export USE_COLLECTOR_OR_AGENT=collector
+                    cd jaeger-java-test
+                    mvn clean test
+                '''
             }
         }
         stage('production-elastic: functional test with edge route'){
             steps{
-                withEnv(["JAVA_HOME=${ tool 'jdk8' }", "PATH+MAVEN=${tool 'maven-3.5.2'}/bin:${env.JAVA_HOME}/bin"]) {
-                    sh '''
-                        export USE_COLLECTOR_OR_AGENT=collector
-                        oc create route edge --service=jaeger-collector --port jaeger-collector-http --insecure-policy=Allow
-                        export JAEGER_COLLECTOR_HOST=`oc get route jaeger-collector --output=go-template={{.spec.host}}`
-                        export JAEGER_PORT_ZIPKIN_COLLECTOR=80
-                        cd jaeger-java-test
-                        mvn clean test
-                    '''
-                }
+                sh '''
+                    export USE_COLLECTOR_OR_AGENT=collector
+                    oc create route edge --service=jaeger-collector --port jaeger-collector-http --insecure-policy=Allow
+                    export JAEGER_COLLECTOR_HOST=`oc get route jaeger-collector --output=go-template={{.spec.host}}`
+                    export JAEGER_PORT_ZIPKIN_COLLECTOR=80
+                    cd jaeger-java-test
+                    mvn clean test
+                '''
             }
         }
         stage('production-elastic: delete all') {
             steps {
-                sh 'oc delete -f https://raw.githubusercontent.com/RHsyseng/docker-rhel-elasticsearch/5.x/es-cluster-deployment.yml --grace-period=1'
-                sh 'oc delete all,template,daemonset,configmap -l jaeger-infra'
+                sh './cleanup.sh'
             }
         }
     }
