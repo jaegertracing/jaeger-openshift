@@ -141,6 +141,7 @@ EOF
   post {
     always {
       sh '''
+        ./cleanup.sh
         chmod +x jenkins-ci/push-logs.sh
       '''
       }
