@@ -96,10 +96,6 @@ EOF
                       sleep 1
                   done
                 '''
-                sh 'oc env statefulset/elasticsearch NAMESPACE=${PROJECT_NAME} -n ${PROJECT_NAME}'
-                sh 'oc adm policy add-role-to-user view -z elasticsearch'
-                /* Restart to apply changes */
-                sh 'oc delete po -l app=elasticsearch'
             }
         }
         stage('production-elastic: deploy Jaeger') {
