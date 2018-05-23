@@ -46,9 +46,9 @@ EOF
                 sh '''
                     export USE_COLLECTOR_OR_AGENT=agent
                     rm ./jaeger-java-test -rf
-                    git clone https://github.com/Hawkular-QE/jaeger-java-test.git
+                    git clone https://github.com/Kiali-QE/jaeger-java-test.git
                     cd jaeger-java-test
-                    mvn clean test
+                    mvn -Dsurefire.rerunFailingTestsCount=2 clean test
                 '''
             }
         }
@@ -76,7 +76,7 @@ EOF
                 sh '''
                     export USE_COLLECTOR_OR_AGENT=collector
                     cd jaeger-java-test
-                    mvn clean test
+                    mvn -Dsurefire.rerunFailingTestsCount=2 clean test
                 '''
             }
         }
@@ -111,7 +111,7 @@ EOF
                 sh '''
                     export USE_COLLECTOR_OR_AGENT=collector
                     cd jaeger-java-test
-                    mvn clean test
+                    mvn -Dsurefire.rerunFailingTestsCount=2 clean test
                 '''
             }
         }
@@ -123,7 +123,7 @@ EOF
                     export JAEGER_COLLECTOR_HOST=`oc get route jaeger-collector --output=go-template={{.spec.host}}`
                     export JAEGER_PORT_ZIPKIN_COLLECTOR=80
                     cd jaeger-java-test
-                    mvn clean test
+                    mvn -Dsurefire.rerunFailingTestsCount=2 clean test
                 '''
             }
         }
