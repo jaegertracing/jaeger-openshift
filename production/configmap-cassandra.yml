@@ -32,5 +32,3 @@ data:
     cassandra:
       servers: cassandra
       keyspace: jaeger_v1_dc1
-    query:
-      static-files: /go/jaeger-ui/

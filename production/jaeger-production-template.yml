@@ -22,7 +22,7 @@ parameters:
   displayName: Image version
   name: IMAGE_VERSION
   required: false
-  value: "1.2"
+  value: "1.6"
 - description: The name of the Jaeger Zipkin Service.
   displayName: Jaeger Zipkin Service Name
   name: JAEGER_ZIPKIN_SERVICE_NAME
@@ -67,9 +67,7 @@ objects:
         containers:
         - image: jaegertracing/jaeger-collector:${IMAGE_VERSION}
           name: ${JAEGER_SERVICE_NAME}-collector
-          command:
-            - "/go/bin/collector-linux"
-            - "--config-file=/conf/collector.yaml"
+          args: ["--config-file=/conf/collector.yaml"]
           ports:
           - containerPort: 14267
             protocol: TCP
@@ -153,9 +151,7 @@ objects:
         containers:
         - image: jaegertracing/jaeger-query:${IMAGE_VERSION}
           name: jaeger-query
-          command:
-            - "/go/bin/query-linux"
-            - "--config-file=/conf/query.yaml"
+          args: ["--config-file=/conf/query.yaml"]
           ports:
           - containerPort: 16686
             protocol: TCP

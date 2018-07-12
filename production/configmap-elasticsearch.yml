@@ -30,5 +30,3 @@ data:
   query: |
     es:
       server-urls: http://elasticsearch:9200
-    query:
-      static-files: /go/jaeger-ui/

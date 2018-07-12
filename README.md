@@ -103,7 +103,6 @@ For instance, assuming that your application is named `myapp` and the image is f
           - containerPort: 6832
             protocol: UDP
           command:
-          - "/go/bin/agent-linux"
           - "--collector.host-port=jaeger-collector.jaeger-infra.svc:14267"
 ```
 
