@@ -172,6 +172,12 @@ objects:
               configMapKeyRef:
                 name: jaeger-configuration
                 key: span-storage-type
+        - image: jaegertracing/jaeger-agent:${IMAGE_VERSION}
+          name: jaeger-agent
+          args: ["--collector.host-port=jaeger-collector:14267"]
+          ports:
+          - containerPort: 6831
+            protocol: UDP
         volumes:
           - configMap:
               name: jaeger-configuration

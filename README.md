@@ -14,13 +14,11 @@ Once everything is ready, `oc status` tells you where to find Jaeger URL.
 ## Production setup
 
 ### Backing storage
-
 The Jaeger Collector and Query require a backing storage to exist before being started up. As a starting point for your own 
 templates, we provide a basic template to deploy Cassandra. It is not ready for production and should be adapted before any
 real usage.
 
-#### Cassandra 
-
+#### Cassandra
 To use our Cassandra template:
 
     oc create -f production/cassandra.yml
@@ -44,7 +42,6 @@ We encourage you to use other templates, for example [docker-rhel-elasticsearch]
 This Elasticsearch deployment is also used by integration tests for this repository.
 
 ### Jaeger configuration
-
 The Jaeger Collector, Query and Agent require a `ConfigMap` to exist on the same namespace, named `jaeger-configuration`.
 This `ConfigMap` is included in the storage templates, as each backing storage have their own specific configuration entries,
 but in your environment, you'll probably manage it differently.
@@ -54,7 +51,6 @@ If changes are required for the configuration, the `edit` command can be used:
     oc edit configmap jaeger-configuration
 
 ### Jaeger components
-
 The main production template deploys the Collector and the Query Service (with UI) as separate individually scalable services.
 
     oc process -f production/jaeger-production-template.yml | oc create -f -
