@@ -39,7 +39,7 @@ metadata:
   annotations:
     description: Jaeger Distributed Tracing Server (all-in-one)
     iconClass: icon-go-gopher
-    openshift.io/display-name: Jaeger
+    openshift.io/display-name: Jaeger (all-in-one)
     tags: instant-app,tracing,opentracing,jaeger
   labels:
     name: jaeger-infra

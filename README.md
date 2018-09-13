@@ -146,6 +146,20 @@ this command might be as easy as running `dnf install origin-clients` on a recen
 the OpenShift [installation guide or quick start guide](https://install.openshift.com/) for more information.
 Another alternative is to use [`minishift`](https://github.com/minishift/minishift).
 
+## OpenShift Service Catalog
+
+The templates available in this repository are also suitable to be added to the OpenShift Service Catalog.
+To do so, run `oc create -n openshift -f <template>` and wait for the Template Service Broker to pick it up,
+which might take a couple of minutes.
+
+```
+oc create -n openshift -f https://raw.githubusercontent.com/jaegertracing/jaeger-openshift/master/all-in-one/jaeger-all-in-one-template.yml
+oc create -n openshift -f https://raw.githubusercontent.com/jaegertracing/jaeger-openshift/master/production/jaeger-production-template.yml
+```
+
+Before provisioning a production instance, however, your users will need to provision a backing storage and install an appropriate `ConfigMap`, 
+as described previously in this document.
+
 ## Uninstalling
 If you need to remove the all Jaeger components created by this template, run:
 
