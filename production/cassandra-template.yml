@@ -1,0 +1,201 @@
+#
+# Copyright 2017-2018 The Jaeger Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software distributed under the License
+# is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+# or implied. See the License for the specific language governing permissions and limitations under
+# the License.
+#
+
+parameters:
+- description: The name of the storage class for the Cassandra data PVC
+  displayName: Cassandra data volume Storage Class Name
+  name: DATA_STORAGE_CLASS
+- description: Size of each Cassandra data PVC. Must end with Mi, Gi, Ti
+  displayName: Cassandra data volume size
+  name: DATA_STORAGE_REQUEST_SIZE
+  required: false
+  value: "200Mi"
+- description: The name of the storage class for the Cassandra logs PVC
+  displayName: Cassandra logs volume Storage Class Name
+  name: LOGS_STORAGE_CLASS
+- description: Size of each Cassandra log PVC. Must end with Mi, Gi, Ti
+  displayName: Cassandra log volume size
+  name: LOGS_STORAGE_REQUEST_SIZE
+  required: false
+  value: "200Mi"
+- description: The name of the Cassandra Service
+  displayName: Cassandra Service Name
+  name: CASSANDRA_SERVICE_NAME
+  required: true
+  value: cassandra
+- description: Size of Java max heap size (must end with M or G)
+  displayName: Cassandra Java max heap size
+  name: CASSANDRA_MAX_HEAP_SIZE
+  required: true
+  value: 2048M
+- description: Size of new heaps in Java for Cassandra (must end with M or G)
+  displayName: Cassandra Java heap new size
+  name: CASSANDRA_HEAP_NEWSIZE
+  required: true
+  value: 512M
+- description: Name of the cluster
+  displayName: Cassandra cluster name
+  name: CASSANDRA_CLUSTER_NAME
+  required: true
+  value: "jaeger"
+- description: Name of the DC in Cassandra
+  displayName: Cassandra DC name
+  name: CASSANDRA_DC
+  required: true
+  value: "dc1"
+- description: Name of the rack in Cassandra
+  displayName: Cassandra Rack name
+  name: CASSANDRA_RACK
+  required: true
+  value: "rack1"
+
+apiVersion: v1
+kind: Template
+metadata:
+  creationTimestamp: null
+  name: cassandra
+objects:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: ${CASSANDRA_SERVICE_NAME}
+    labels:
+      app: jaeger
+      name: jaeger-cassandra-service
+      jaeger-infra: cassandra-service
+  spec:
+    ports:
+    - port: 7000
+      name: intra-node
+    - port: 7001
+      name: tls-intra-node
+    - port: 7199
+      name: jmx
+    - port: 9042
+      name: cql
+    - port: 9160
+      name: thrift
+    clusterIP: None
+    selector:
+      app: cassandra
+- apiVersion: "apps/v1beta1"
+  kind: StatefulSet
+  metadata:
+    name: ${CASSANDRA_SERVICE_NAME}
+    labels:
+      app: jaeger
+      jaeger-infra: cassandra-statefulset
+  spec:
+    serviceName: ${CASSANDRA_SERVICE_NAME}
+    replicas: ${REPLICA_COUNT}
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app: cassandra
+        jaeger-infra: cassandra-replica
+    template:
+      metadata:
+        labels:
+          app: cassandra
+          jaeger-infra: cassandra-replica
+      spec:
+        terminationGracePeriodSeconds: 1800
+        containers:
+        - name: ${CASSANDRA_SERVICE_NAME}
+          image: cassandra:3.11
+          command:
+          - /docker-entrypoint.sh
+          - "-R"
+          ports:
+          - containerPort: 7000
+            name: intra-node
+          - containerPort: 7001
+            name: tls-intra-node
+          - containerPort: 7199
+            name: jmx
+          - containerPort: 9042
+            name: cql
+          - containerPort: 9160
+            name: thrift
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "nodetool drain"]
+          env:
+          - name: MAX_HEAP_SIZE
+            value: ${CASSANDRA_MAX_HEAP_SIZE}
+          - name: HEAP_NEWSIZE
+            value: ${CASSANDRA_HEAP_NEWSIZE}
+          - name: CASSANDRA_LISTEN_ADDRESS
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name: CASSANDRA_CLUSTER_NAME
+            value: "${CASSANDRA_CLUSTER_NAME}"
+          - name: CASSANDRA_DC
+            value: "${CASSANDRA_DC}"
+          - name: CASSANDRA_RACK
+            value: "${CASSANDRA_RACK}"
+          - name: CASSANDRA_ENDPOINT_SNITCH
+            value: "GossipingPropertyFileSnitch"
+          - name: CASSANDRA_SEEDS
+            value: cassandra-0.cassandra
+          volumeMounts:
+          - name: ${CASSANDRA_SERVICE_NAME}-data
+            mountPath: /var/lib/cassandra
+          - name: ${CASSANDRA_SERVICE_NAME}-logs
+            mountPath: /var/log/cassandra
+    volumeClaimTemplates:
+    - metadata:
+        name: ${CASSANDRA_SERVICE_NAME}-data
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        storageClassName: ${DATA_STORAGE_CLASS}
+        resources:
+          requests:
+            storage: ${DATA_STORAGE_REQUEST_SIZE}
+      status:
+        phase: Pending
+    - metadata:
+        name: ${CASSANDRA_SERVICE_NAME}-logs
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        storageClassName: ${LOGS_STORAGE_CLASS}
+        resources:
+          requests:
+            storage: ${LOGS_STORAGE_REQUEST_SIZE}
+- apiVersion: batch/v1
+  kind: Job
+  metadata:
+    name: jaeger-cassandra-schema-job
+    labels:
+      app: jaeger
+      jaeger-infra: cassandra-schema-job
+  spec:
+    activeDeadlineSeconds: 120
+    template:
+      metadata:
+        name: cassandra-schema
+      spec:
+        containers:
+        - name: jaeger-cassandra-schema
+          image: jaegertracing/jaeger-cassandra-schema:1.6
+          env:
+            - name: MODE
+              value: "prod"
+            - name: DATACENTER
+              value: "dc1"
+        restartPolicy: OnFailure
