@@ -63,6 +63,9 @@ objects:
         labels:
           app: jaeger
           jaeger-infra: collector-pod
+        annotations:
+          prometheus.io/scrape: "true"
+          prometheus.io/port: "14268"
       spec:
         containers:
         - image: jaegertracing/jaeger-collector:${IMAGE_VERSION}
@@ -151,6 +154,9 @@ objects:
         labels:
           app: jaeger
           jaeger-infra: query-pod
+        annotations:
+          prometheus.io/scrape: "true"
+          prometheus.io/port: "16686"
       spec:
         containers:
         - image: jaegertracing/jaeger-query:${IMAGE_VERSION}

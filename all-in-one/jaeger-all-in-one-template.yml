@@ -61,6 +61,9 @@ objects:
         labels:
           app: jaeger
           jaeger-infra: jaeger-pod
+        annotations:
+          prometheus.io/scrape: "true"
+          prometheus.io/port: "16686"
       spec:
           containers:
             - env:
