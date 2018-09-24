@@ -98,7 +98,7 @@ For instance, assuming that your application is named `myapp` and the image is f
             protocol: UDP
           - containerPort: 6832
             protocol: UDP
-          command:
+          args:
           - "--collector.host-port=jaeger-collector.jaeger-infra.svc:14267"
 ```
 
