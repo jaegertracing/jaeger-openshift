@@ -59,7 +59,12 @@ parameters:
   name: CASSANDRA_RACK
   required: true
   value: "rack1"
-
+- description: Number of Cassandra replicas
+  displayName: Cassandra Replica count
+  name: REPLICA_COUNT
+  required: true
+  value: "3"
+  
 apiVersion: v1
 kind: Template
 metadata:
