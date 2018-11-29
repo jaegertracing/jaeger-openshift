@@ -114,6 +114,10 @@ objects:
       jaeger-infra: collector-service
   spec:
     ports:
+    - name: jaeger-collector-grpc
+      port: 14250
+      protocol: TCP
+      targetPort: 14250
     - name: jaeger-collector-tchannel
       port: 14267
       protocol: TCP

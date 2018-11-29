@@ -72,6 +72,8 @@ objects:
           name: ${JAEGER_SERVICE_NAME}-collector
           args: ["--config-file=/conf/collector.yaml"]
           ports:
+          - containerPort: 14250
+            protocol: TCP
           - containerPort: 14267
             protocol: TCP
           - containerPort: 14268
@@ -107,6 +109,10 @@ objects:
       jaeger-infra: collector-service
   spec:
     ports:
+    - name: jaeger-collector-grpc
+      port: 14250
+      protocol: TCP
+      targetPort: 14250
     - name: jaeger-collector-tchannel
       port: 14267
       protocol: TCP
@@ -180,7 +186,7 @@ objects:
                 key: span-storage-type
         - image: jaegertracing/jaeger-agent:${IMAGE_VERSION}
           name: jaeger-agent
-          args: ["--collector.host-port=jaeger-collector:14267"]
+          args: ["--reporter.tchannel.host-port=jaeger-collector:14267"]
           ports:
           - containerPort: 6831
             protocol: UDP
