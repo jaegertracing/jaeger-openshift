@@ -1,5 +1,5 @@
 #
-# Copyright 2017-2018 The Jaeger Authors
+# Copyright 2017-2019 The Jaeger Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
 # in compliance with the License. You may obtain a copy of the License at
@@ -28,6 +28,32 @@ parameters:
   name: JAEGER_ZIPKIN_SERVICE_NAME
   required: true
   value: zipkin
+- description: Limit the number of traces stored in-memory, see https://www.jaegertracing.io/docs/latest/deployment/#memory
+  displayName: Max Traces
+  name: MAX_TRACES
+  required: true
+  value: "50000"
+# See https://docs.okd.io/latest/dev_guide/compute_resources.html for the CPU/Memory Request/Limit parameters below
+- description: CPU request represents a minimum amount of CPU that your container may consume, but if there is no contention for CPU, it can use all available CPU on the node.
+  displayName: CPU Request
+  name: CPU_REQUEST
+  required: true
+  value: "100m"
+- description: CPU limits control the maximum amount of CPU that your container may use independent of contention on the node.
+  displayName: CPU Limit
+  name: CPU_LIMIT
+  required: true
+  value: "500m"
+- description: In order to improve placement of pods in the cluster, specify the amount of memory required for a container to run.
+  displayName: Memory Request
+  name: MEMORY_REQUEST
+  required: true
+  value: "100Mi"
+- description: Constrain the amount of memory the container can use.
+  displayName: Memory Limit
+  name: MEMORY_LIMIT
+  required: true
+  value: "2Gi"
 
 apiVersion: v1
 kind: Template
@@ -71,6 +97,7 @@ objects:
                 value: "9411"
               image: jaegertracing/all-in-one:${IMAGE_VERSION}
               name: ${JAEGER_SERVICE_NAME}
+              args: ["--memory.max-traces=${MAX_TRACES}"]
               ports:
                 - containerPort: 5775
                   protocol: UDP
@@ -89,6 +116,13 @@ objects:
                   path: "/"
                   port: 14269
                 initialDelaySeconds: 5
+              resources:
+                requests:
+                  cpu: ${CPU_REQUEST}
+                  memory: ${MEMORY_REQUEST}
+                limits:
+                  cpu: ${CPU_LIMIT}
+                  memory: ${MEMORY_LIMIT}
 - apiVersion: v1
   kind: Service
   metadata:

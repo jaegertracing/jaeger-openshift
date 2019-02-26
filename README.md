@@ -2,7 +2,9 @@
 
 ## Development setup
 This template uses an in-memory storage with a limited functionality for local testing and development.
-Do not use this template in production environments.
+Do not use this template in production environments, although there are a number of parameters in the
+template to constrain the maximum number of traces and the amount of CPU/Memory consumed to prevent
+node instability.
 
 Install everything in the current namespace:
 ```bash
@@ -14,7 +16,7 @@ Once everything is ready, `oc status` tells you where to find Jaeger URL.
 ## Production setup
 
 ### Backing storage
-The Jaeger Collector and Query require a backing storage to exist before being started up. As a starting point for your own 
+The Jaeger Collector and Query require a backing storage to exist before being started up. As a starting point for your own
 templates, we provide a basic template to deploy Cassandra. It is not ready for production and should be adapted before any
 real usage.
 
@@ -113,7 +115,7 @@ Cassandra deployment does not support deleting pods or scaling down, as this mig
 administrative tasks that are dependent on the final deployment architecture.
 
 ## Exposing Jaeger-Collector outside of Cluster
-Collector is by default accessible only to services running inside the cluster. 
+Collector is by default accessible only to services running inside the cluster.
 The easiest approach to expose the collector outside of the cluster is via the `jaeger-collector-http`
 HTTP port using an OpenShift Route:
 
@@ -125,8 +127,8 @@ This allows clients to send data directly to Collector via HTTP senders. If you 
 [ExternalIP or NodePort](https://docs.openshift.com/container-platform/3.3/dev_guide/getting_traffic_into_cluster.html)
 to expose the Collector service.
 
-Note that doing so will open the collector to be used by any external party, who will then 
-be able to create arbitrary spans. 
+Note that doing so will open the collector to be used by any external party, who will then
+be able to create arbitrary spans.
 It's advisable to put an OAuth Security Proxy in front of the collector and expose this proxy instead.
 
 ## Using a different version
@@ -157,7 +159,7 @@ oc create -n openshift -f https://raw.githubusercontent.com/jaegertracing/jaeger
 oc create -n openshift -f https://raw.githubusercontent.com/jaegertracing/jaeger-openshift/master/production/jaeger-production-template.yml
 ```
 
-Before provisioning a production instance, however, your users will need to provision a backing storage and install an appropriate `ConfigMap`, 
+Before provisioning a production instance, however, your users will need to provision a backing storage and install an appropriate `ConfigMap`,
 as described previously in this document.
 
 ## Uninstalling
